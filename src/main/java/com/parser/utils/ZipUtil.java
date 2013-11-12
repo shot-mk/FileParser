@@ -1,7 +1,12 @@
-package com.parser;
+package com.parser.utils;
+
+import com.parser.infos.FileInfo;
+import com.parser.infos.ZipInfo;
 
 import java.io.*;
+import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -10,10 +15,12 @@ import java.util.LinkedList;
  * Time: 9:57
  * To change this template use File | Settings | File Templates.
  */
-public class ZipUtil {
+public class ZipUtil implements FileParser{
     FileInputStream in;
+    String signature;
     String path;
     String fileName;
+    String[] files;
     String[] compressionMethod = {
             "The file is stored (no compression)",
             "The file is Shrunk",
@@ -52,8 +59,6 @@ public class ZipUtil {
     public void showZipInformation() throws IOException {
         try{
             checkZip();
-        } catch (NotAZipException e) {
-            System.out.println("FIle is not zip.");
         } catch (IOException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
 
@@ -63,34 +68,33 @@ public class ZipUtil {
         showListOfFiles();
     }
 
-    private void checkZip() throws IOException, NotAZipException {
+    private void checkZip() throws IOException{
         int signature = (int) readNumber(4,in);
         if (signature == 0x04034b50) {
-            System.out.println("File is zip.");
-        } else {
-            throw new NotAZipException();
+            this.signature = "zip";
         }
     }
 
-    private void showCompressionMetod() throws IOException {
-        in.skip(4);
+    private String showCompressionMetod() throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        in.skip(8);
         int compMetod = (int) readNumber(2,in);
-        System.out.println("Compression metod : " + compressionMethod[compMetod]);
+        in.close();
+        return compressionMethod[compMetod];
     }
 
     private void showFileName() throws IOException {
-        in.skip(16);
+        FileInputStream in = new FileInputStream(path);
+        in.skip(24);
         int fileNameLength = (int) readNumber(2,in);
         in.skip(2);
         byte[] fileNameByteArray = new byte[fileNameLength];
         in.read(fileNameByteArray);
         fileName = new String(fileNameByteArray);
-        System.out.println("File name : " + fileName);
+        in.close();
     }
 
-     private void showListOfFiles() throws IOException {
-         System.out.println("- - - - - - - - - - - - - - - - ");
-         System.out.println("Files : ");
+     private List<String> showListOfFiles() throws IOException {
          LinkedList<String> listOfFiles = new LinkedList<String>();
          while(skipToFile()) {
              in.skip(22);
@@ -99,13 +103,14 @@ public class ZipUtil {
              byte[] fileNameByteArray = new byte[fileNameLength];
              in.read(fileNameByteArray);
              String fileName = new String(fileNameByteArray);
-             listOfFiles.add(fileName);
+             if(fileName.charAt(fileName.length()-1) != '/')
+                listOfFiles.add(fileName);
          }
-         for(String c : listOfFiles) {
-             if(!(c.charAt(c.length() - 1) == '/'))
-                System.out.println(c);
-         }
-         System.out.println("- - - - - - - - - - - - - - - - ");
+//         for(String c : listOfFiles){
+//             System.out.println("c = " + c);
+//         }
+
+         return listOfFiles;
      }
 
     private boolean skipToFile() throws IOException {
@@ -123,25 +128,33 @@ public class ZipUtil {
         return false;
     }
 
-
-    class NotAZipException extends Exception{
-        NotAZipException() {
-        }
-
-        NotAZipException(String message) {
-            super(message);
-        }
-
-        NotAZipException(String message, Throwable cause) {
-            super(message, cause);
-        }
-
-        NotAZipException(Throwable cause) {
-            super(cause);
-        }
-
-        NotAZipException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-            super(message, cause, enableSuppression, writableStackTrace);
-        }
+    @Override
+    public boolean checkFile(String path) throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        int signature = (int) readNumber(4,in);
+        in.close();
+        if (signature == 0x04034b50)
+           return true;
+        return false;
     }
+
+    @Override
+    public String getFileSignature() throws IOException {
+        return null;
+    }
+
+    @Override
+    public FileInfo parse(String path) throws IOException {
+        if (checkFile(path) == false)
+            return null;
+        ZipInfo result = new ZipInfo();
+        checkZip();
+        result.setSignature(signature);
+        result.setCompressionMethod(showCompressionMetod());
+        result.setFiles(showListOfFiles());
+        return result;
+    }
+
+
+
 }

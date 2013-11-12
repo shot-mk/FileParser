@@ -1,4 +1,7 @@
-package com.parser;
+package com.parser.utils;
+
+import com.parser.infos.FileInfo;
+import com.parser.infos.JavaClassInfo;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -11,12 +14,14 @@ import java.io.IOException;
  * Time: 17:42
  * To change this template use File | Settings | File Templates.
  */
-public class JavaClassUtil {
+public class JavaClassUtil implements FileParser {
     String path;
     //FileInputStream in;
     int constantPullCount = 0;
     long constantPullSizeBytes = 0;
     long constantPullTable[][];
+    String[] fields;
+    String[] methods;
 
 
     public JavaClassUtil(String path) throws FileNotFoundException {
@@ -31,11 +36,9 @@ public class JavaClassUtil {
             System.out.println("This file is not .class");
             return;
         }
-        System.out.println("- - - - - - - - - - ");
         showVerison();
         checkConstantPullCount();
         constantPullScan();
-        System.out.println("- - - - - - - - - - ");
         showThisClassName();
         showListOfFieldsAndMethods();
 
@@ -54,20 +57,20 @@ public class JavaClassUtil {
         in.close();
     }
 
-    private void showVerison() throws IOException {
+    private String showVerison() throws IOException {
         FileInputStream in = new FileInputStream(path);
         in.skip(4);
         int minorVersionInt = (int) readNumber(2, in);
         int majorVersionInt = (int) readNumber(2, in);
-        System.out.println("Version : " + majorVersionInt + "." + minorVersionInt);
+        String version = "Version : " + majorVersionInt + "." + minorVersionInt;
         in.close();
+        return version;
     }
 
     private void checkConstantPullCount() throws IOException {
         FileInputStream in = new FileInputStream(path);
         in.skip(8);
         constantPullCount = (int) readNumber(2, in);
-        System.out.println("constantPullCount : " + constantPullCount);
     }
 
     private long readNumber(int bytes, FileInputStream in) throws IOException {
@@ -141,16 +144,14 @@ public class JavaClassUtil {
 
 
 
-    public void showThisClassName() throws IOException {
+    public String showThisClassName() throws IOException {
         FileInputStream in = new FileInputStream(path);
         in.skip(constantPullSizeBytes+2);
         int thisClass = (int)readNumber(2,in) ;
-        //System.out.println("thisClass = " + thisClass);
         in.close();
         in = new FileInputStream(path);
         in.skip(constantPullTable[thisClass][1]);
         int thisClassNameIndex = (int)readNumber(2,in) ;
-       // System.out.println("thisClassNameIndex = " + thisClassNameIndex);
         in.close();
         in = new FileInputStream(path);
         in.skip(constantPullTable[thisClassNameIndex][1]);
@@ -158,8 +159,8 @@ public class JavaClassUtil {
         byte [] name = new byte[length];
         in.read(name);
         String nameString = new String(name);
-        System.out.println("Class Name: " + nameString);
         in.close();
+        return nameString;
     }
 
     public void showListOfFieldsAndMethods() throws IOException {
@@ -168,47 +169,43 @@ public class JavaClassUtil {
         int interfaceCount = (int) readNumber(2,in);
         in.skip(2 * interfaceCount);
         int fieldsCount = (int) readNumber(2,in);
-        System.out.println("- - - - - - - - - - ");
-        System.out.println("Fields : ");
+        fields = new String[fieldsCount];
         for (int i = 0; i < fieldsCount; i++) {
-            showField(in);
+            fields[i] = showField(in);
         }
-        System.out.println("- - - - - - - - - - ");
         int methodCount = (int) readNumber(2, in);
-        System.out.println("- - - - - - - - - - ");
-        System.out.println("Methods : ");
         for (int i = 0; i < methodCount; i++) {
-            showMethod(in);
+            methods[i] = showMethod(in);
         }
-        System.out.println("- - - - - - - - - - ");
-
-
-
-
     }
 
 
-    public void showField(FileInputStream in) throws IOException {
+    public String showField(FileInputStream in) throws IOException {
         in.skip(2);
         int nameIndex = (int) readNumber(2,in);
-        showFieldName(nameIndex);
+        String fieldName;
+        fieldName = showFieldName(nameIndex);
         in.skip(2);
         int attributesCount = (int) readNumber(2,in);
         for (int i = 0; i < attributesCount; i++) {
             skipAtributeInfo(in);
         }
+        return fieldName;
     }
 
-    public void showMethod(FileInputStream in) throws IOException {
+    public String showMethod(FileInputStream in) throws IOException {
         in.skip(2);
         int nameIndex = (int) readNumber(2,in);
-        showMethodName(nameIndex);
+        String methodName;
+        methodName = showMethodName(nameIndex);
         in.skip(2);
         int attributesCount = (int) readNumber(2,in);
         for (int i = 0; i < attributesCount; i++) {
             skipAtributeInfo(in);
         }
+        return methodName;
     }
+
     public void skipAtributeInfo(FileInputStream in) throws IOException {
         in.skip(2);
         long attribtueLength = readNumber(4,in);
@@ -216,29 +213,65 @@ public class JavaClassUtil {
     }
 
 
-    public void showFieldName(int nameIndex) throws IOException {
+    public String showFieldName(int nameIndex) throws IOException {
         FileInputStream in = new FileInputStream(path);
         in.skip(constantPullTable[nameIndex][1]);
         int length = (int)readNumber(2,in);
         byte [] name = new byte[length];
         in.read(name);
         String nameString = new String(name);
-        System.out.println("Field Name : " + nameString);
         in.close();
+        return nameString;
     }
 
-    public void showMethodName(int nameIndex) throws IOException {
+    public String showMethodName(int nameIndex) throws IOException {
         FileInputStream in = new FileInputStream(path);
         in.skip(constantPullTable[nameIndex][1]);
         int length = (int)readNumber(2,in);
         byte [] name = new byte[length];
         in.read(name);
         String nameString = new String(name);
-        System.out.println("Method Name : " + nameString);
         in.close();
+        return nameString;
     }
 
+    @Override
+    public boolean checkFile(String path) throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        long classActualSignature = 0xCAFEBABE;
+        long classSignature = readNumber(4, in);
+        in.close();
+        if (classActualSignature == classSignature)
+            return true;
+        return false;
+    }
 
+    @Override
+    public String getFileSignature() throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        long classActualSignature = 0xCAFEBABE;
+        long classSignature = readNumber(4, in);
+        in.close();
+        if (classActualSignature == classSignature)
+            return "class";
+        return null;
+    }
+
+    @Override
+    public FileInfo parse(String path) throws IOException {
+        if(checkFile(path) == false)
+            return null;
+        JavaClassInfo result = new JavaClassInfo();
+        result.setSignature(getFileSignature());
+        result.setVersion(showVerison());
+        checkConstantPullCount();
+        constantPullScan();
+        result.setThisClassName(showThisClassName());
+        showListOfFieldsAndMethods();
+        result.setFields(fields);
+        result.setMethods(methods);
+        return result;
+    }
 
 
     class NotAClassException extends Exception {

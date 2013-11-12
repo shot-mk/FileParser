@@ -1,4 +1,4 @@
-package com.parser;
+package com.parser.infos;
 
 import java.util.List;
 

@@ -1,5 +1,6 @@
-package com.parser;
+package com.parser.utils;
 
+import com.parser.infos.FileInfo;
 import com.parser.infos.GifInfo;
 
 import java.io.FileInputStream;
@@ -15,7 +16,7 @@ import java.io.IOException;
  */
 
 
-public class GifUtil implements FileParser{
+public class GifUtil implements FileParser {
     String path;
     FileInputStream in;
     int flagByte; // Байт наличия глобальной палитры.
@@ -29,12 +30,8 @@ public class GifUtil implements FileParser{
     }
 
     public void showGIFInformation() throws IOException{
-        try {
-            checkGIF();
-        } catch (NotAGifException e) {
-            System.out.println("File is not GIF.");
-            return;
-        }
+        checkFile(path);
+        in.skip(3);
         getVersion();
         getWidth();
         getHeight();
@@ -49,53 +46,68 @@ public class GifUtil implements FileParser{
         }
         getNumberOfFrames();
         System.out.println("Image have : " + numberOfFrames + " frames.");
-
-
-
     }
 
-    private boolean checkFile (String path) throws IOException, NotAGifException {
+    public boolean checkFile (String path) throws IOException {
+        FileInputStream in = new FileInputStream(path);
         byte[] signature = new byte [3];
         in.read(signature);
         String signatureString = new String(signature);
-        if(signatureString.equals("GIF"))
+        in.close();
+        if(signatureString.equals("GIF")) {
             this.signatureString = signatureString;
-        else
-            throw new NotAGifException();
+            return true;
+        }
+        return false;
     }
 
-    private void getVersion() throws IOException {
+    private String getVersion() throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        in.skip(3);
         char[] version = new char [3];
         for(int i = 0; i < version.length; i++) {
             version[i] = (char) in.read();
         }
         String versionString = new String(version);
-        System.out.println("Version : " + versionString);
+        in.close();
+        return versionString;
     }
 
-    private void getWidth() throws IOException {
+    private int getWidth() throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        in.skip(6);
         int[] width = new int[2];
         for(int i = 0; i < width.length; i++) {
             width[i] = in.read();
         }
-        System.out.println("Image width : " + (width[0] + width[1]*256));
+        int widthInteger = (width[0] + width[1]*256);
+        in.close();
+        return widthInteger;
     }
 
-    private void getHeight() throws IOException {
+    private int getHeight() throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        in.skip(8);
         int[] height = new int[2];
         for(int i = 0; i < height.length; i++) {
             height[i] = in.read();
         }
-        System.out.println("Image height : " + (height[0] + height[1]*256));
+        int heightInteger = height[0] + height[1] * 256;
+        in.close();
+        return heightInteger;
     }
 
     private void readFlagByte() throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        in.skip(10);
         flagByte = in.read();
+        in.close();
     }
 
-    private void getGlobalPalletSize() {
+    private int getGlobalPalletSize() {
         int globalPalletNumber = (flagByte & 7);
         globalPalletSize = (int) Math.pow(2, globalPalletNumber + 1) * 3;
+        return globalPalletSize;
     }
 
     private int getLocalPalletSize(int localFlagByte) {
@@ -105,6 +117,7 @@ public class GifUtil implements FileParser{
     }
 
     private void getNumberOfFrames () throws IOException {
+        in.skip(11);
         in.skip(globalPalletSize);
         while(in.available() > 1) {
             int temp = in.read();
@@ -144,43 +157,27 @@ public class GifUtil implements FileParser{
         }
     }
 
-//    public boolean checkFile(String path) {
-//        if(signatureString == "GIF")
-//            return true;
-//        else
-//            return false;
-//    }
-
-    public String getFileSignature() {
-        return null;  //To change body of implemented methods use File | Settings | File Templates.
+    public String getFileSignature() throws IOException {
+        FileInputStream in = new FileInputStream(path);
+        byte[] signature = new byte [3];
+        in.read(signature);
+        String signatureString = new String(signature);
+        in.close();
+        return signatureString;
     }
 
-    public FileInfo parse(String path) {
+    public FileInfo parse(String path) throws IOException {
+        if(checkFile(path) == false)
+            return null;
         GifInfo result = new GifInfo();
-
+        result.setSignature(getFileSignature());
+        result.setVersion(getVersion());
+        result.setWidth(getWidth());
+        result.setHeight(getHeight());
+        result.setGlobalPalletSize(getGlobalPalletSize());
+        getNumberOfFrames();
+        result.setNumberOfFrames(numberOfFrames);
         return result;
     }
 
-
-    class NotAGifException extends Exception{
-
-        NotAGifException() {
-        }
-
-        NotAGifException(String message) {
-            super(message);
-        }
-
-        NotAGifException(String message, Throwable cause) {
-            super(message, cause);
-        }
-
-        NotAGifException(Throwable cause) {
-            super(cause);
-        }
-
-        NotAGifException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-            super(message, cause, enableSuppression, writableStackTrace);
-        }
-    }
 }
