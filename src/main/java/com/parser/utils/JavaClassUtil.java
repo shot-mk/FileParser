@@ -16,45 +16,14 @@ import java.io.IOException;
  */
 public class JavaClassUtil implements FileParser {
     String path;
-    //FileInputStream in;
     int constantPullCount = 0;
     long constantPullSizeBytes = 0;
     long constantPullTable[][];
     String[] fields;
     String[] methods;
 
-
     public JavaClassUtil(String path) throws FileNotFoundException {
         this.path = path;
-        //in = new FileInputStream(path);
-    }
-
-    public void showClassInformation() throws IOException {
-        try {
-            checkClass();
-        } catch (NotAClassException e) {
-            System.out.println("This file is not .class");
-            return;
-        }
-        showVerison();
-        checkConstantPullCount();
-        constantPullScan();
-        showThisClassName();
-        showListOfFieldsAndMethods();
-
-    }
-
-    private void checkClass() throws NotAClassException, IOException {
-        FileInputStream in = new FileInputStream(path);
-        long classActualSignature = 0xCAFEBABE;
-        long classSignature = readNumber(4, in);
-        if (classActualSignature == classSignature) {
-            System.out.println("This file is .class");
-        } else {
-            in.close();
-            throw new NotAClassException();
-        }
-        in.close();
     }
 
     private String showVerison() throws IOException {
@@ -136,14 +105,6 @@ public class JavaClassUtil implements FileParser {
         in.close();
     }
 
-    public void showConstPulltable() {
-        for(int i = 1; i < constantPullCount; i++ ) {
-            System.out.println(i + " : " + constantPullTable[i][0] + " byte " + (constantPullTable[i][1]));
-        }
-    }
-
-
-
     public String showThisClassName() throws IOException {
         FileInputStream in = new FileInputStream(path);
         in.skip(constantPullSizeBytes+2);
@@ -174,11 +135,11 @@ public class JavaClassUtil implements FileParser {
             fields[i] = showField(in);
         }
         int methodCount = (int) readNumber(2, in);
+        methods = new String[methodCount];
         for (int i = 0; i < methodCount; i++) {
-            methods[i] = showMethod(in);
+            methods[i] = showField(in);
         }
     }
-
 
     public String showField(FileInputStream in) throws IOException {
         in.skip(2);
@@ -193,38 +154,13 @@ public class JavaClassUtil implements FileParser {
         return fieldName;
     }
 
-    public String showMethod(FileInputStream in) throws IOException {
-        in.skip(2);
-        int nameIndex = (int) readNumber(2,in);
-        String methodName;
-        methodName = showMethodName(nameIndex);
-        in.skip(2);
-        int attributesCount = (int) readNumber(2,in);
-        for (int i = 0; i < attributesCount; i++) {
-            skipAtributeInfo(in);
-        }
-        return methodName;
-    }
-
     public void skipAtributeInfo(FileInputStream in) throws IOException {
         in.skip(2);
         long attribtueLength = readNumber(4,in);
         in.skip(attribtueLength);
     }
 
-
     public String showFieldName(int nameIndex) throws IOException {
-        FileInputStream in = new FileInputStream(path);
-        in.skip(constantPullTable[nameIndex][1]);
-        int length = (int)readNumber(2,in);
-        byte [] name = new byte[length];
-        in.read(name);
-        String nameString = new String(name);
-        in.close();
-        return nameString;
-    }
-
-    public String showMethodName(int nameIndex) throws IOException {
         FileInputStream in = new FileInputStream(path);
         in.skip(constantPullTable[nameIndex][1]);
         int length = (int)readNumber(2,in);
@@ -271,30 +207,6 @@ public class JavaClassUtil implements FileParser {
         result.setFields(fields);
         result.setMethods(methods);
         return result;
-    }
-
-
-    class NotAClassException extends Exception {
-
-
-        NotAClassException() {
-        }
-
-        NotAClassException(String message) {
-            super(message);
-        }
-
-        NotAClassException(String message, Throwable cause) {
-            super(message, cause);
-        }
-
-        NotAClassException(Throwable cause) {
-            super(cause);
-        }
-
-        NotAClassException(String message, Throwable cause, boolean enableSuppression, boolean writableStackTrace) {
-            super(message, cause, enableSuppression, writableStackTrace);
-        }
     }
 
 }

@@ -18,8 +18,6 @@ public class GifInfo implements FileInfo {
     private int globalPalletSize;
     private int numberOfFrames;
 
-
-
     public List<String> getFileData() {
         List<String> mylist = new LinkedList<String>();
         mylist.add("File is " + signature);

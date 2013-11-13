@@ -26,9 +26,6 @@ public class JavaClassInfo implements FileInfo {
         this.version = version;
     }
 
-
-
-
     public List<String> getFileData() {
         List<String> result = new LinkedList<String>();
         result.add("File signature : " + signature);
@@ -48,7 +45,6 @@ public class JavaClassInfo implements FileInfo {
     public String getFileSignature() {
         return signature;
     }
-
 
     public void setSignature(String signature) {
         this.signature = signature;

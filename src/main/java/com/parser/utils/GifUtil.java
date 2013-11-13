@@ -29,25 +29,6 @@ public class GifUtil implements FileParser {
         in = new FileInputStream(path);
     }
 
-    public void showGIFInformation() throws IOException{
-        checkFile(path);
-        in.skip(3);
-        getVersion();
-        getWidth();
-        getHeight();
-        readFlagByte();
-        if(flagByte / 128 == 1) {           // Взятие первого старшего бита.
-            System.out.println("Image have global pallet.");
-            getGlobalPalletSize();
-            System.out.println("Global pallet size :" + globalPalletSize + " bytes.");
-
-        } else {
-            System.out.println("Image don`t have global pallet.");
-        }
-        getNumberOfFrames();
-        System.out.println("Image have : " + numberOfFrames + " frames.");
-    }
-
     public boolean checkFile (String path) throws IOException {
         FileInputStream in = new FileInputStream(path);
         byte[] signature = new byte [3];
@@ -174,7 +155,11 @@ public class GifUtil implements FileParser {
         result.setVersion(getVersion());
         result.setWidth(getWidth());
         result.setHeight(getHeight());
-        result.setGlobalPalletSize(getGlobalPalletSize());
+        readFlagByte();
+        if(flagByte / 128 == 1) {           // Взятие первого старшего бита.
+            getGlobalPalletSize();
+            result.setGlobalPalletSize(getGlobalPalletSize());
+        }
         getNumberOfFrames();
         result.setNumberOfFrames(numberOfFrames);
         return result;

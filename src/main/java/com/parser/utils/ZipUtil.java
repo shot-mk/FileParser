@@ -20,7 +20,6 @@ public class ZipUtil implements FileParser{
     String signature;
     String path;
     String fileName;
-    String[] files;
     String[] compressionMethod = {
             "The file is stored (no compression)",
             "The file is Shrunk",
@@ -36,7 +35,6 @@ public class ZipUtil implements FileParser{
             "Reserved by PKWARE",
             "File is compressed using BZIP2 algorithm"
     };
-
 
     public ZipUtil(String path) throws IOException {
         this.path = path;
@@ -56,18 +54,6 @@ public class ZipUtil implements FileParser{
         return result;
     }
 
-    public void showZipInformation() throws IOException {
-        try{
-            checkZip();
-        } catch (IOException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-
-        }
-        showCompressionMetod();
-        showFileName();
-        showListOfFiles();
-    }
-
     private void checkZip() throws IOException{
         int signature = (int) readNumber(4,in);
         if (signature == 0x04034b50) {
@@ -83,15 +69,16 @@ public class ZipUtil implements FileParser{
         return compressionMethod[compMetod];
     }
 
-    private void showFileName() throws IOException {
+    private String showFileName() throws IOException {
         FileInputStream in = new FileInputStream(path);
-        in.skip(24);
+        in.skip(26);
         int fileNameLength = (int) readNumber(2,in);
         in.skip(2);
         byte[] fileNameByteArray = new byte[fileNameLength];
         in.read(fileNameByteArray);
         fileName = new String(fileNameByteArray);
         in.close();
+        return fileName;
     }
 
      private List<String> showListOfFiles() throws IOException {
@@ -106,10 +93,6 @@ public class ZipUtil implements FileParser{
              if(fileName.charAt(fileName.length()-1) != '/')
                 listOfFiles.add(fileName);
          }
-//         for(String c : listOfFiles){
-//             System.out.println("c = " + c);
-//         }
-
          return listOfFiles;
      }
 
@@ -151,6 +134,7 @@ public class ZipUtil implements FileParser{
         checkZip();
         result.setSignature(signature);
         result.setCompressionMethod(showCompressionMetod());
+        result.setFileName(showFileName());
         result.setFiles(showListOfFiles());
         return result;
     }

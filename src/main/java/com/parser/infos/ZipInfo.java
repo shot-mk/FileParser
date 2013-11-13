@@ -11,14 +11,18 @@ import java.util.List;
  * To change this template use File | Settings | File Templates.
  */
 public class ZipInfo implements FileInfo {
-    String signature;
-    String compressionMethod;
-    List<String> files;
+    private String signature;
+    private String compressionMethod;
+    private String fileName;
+    private List<String> files;
 
     public List<String> getFileData() {
         List<String> result = new LinkedList<String>();
+
         result.add("File signature : " + signature);
+        result.add("File name : " + fileName);
         result.add("File comression method : " + compressionMethod);
+
         result.add("List of files : ");
         for(String c : this.files) {
             result.add(c);
@@ -29,7 +33,6 @@ public class ZipInfo implements FileInfo {
     public String getFileSignature() {
         return signature;
     }
-
 
     public void setSignature(String signature) {
         this.signature = signature;
@@ -52,5 +55,11 @@ public class ZipInfo implements FileInfo {
         this.files.addAll(files);
     }
 
+    public String getFileName() {
+        return fileName;
+    }
 
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
 }

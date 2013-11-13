@@ -21,25 +21,24 @@ import java.util.List;
 public class Parser {
 
     static List<FileParser> parsers;
+    static String path;
 
     Parser(String path) throws IOException {
-
+        this.path = path;
         parsers = new LinkedList<FileParser>();
-    }
-
-    public  void initialize(String path) throws IOException {
-
         parsers.add(new GifUtil(path));
         parsers.add(new ZipUtil(path));
         parsers.add(new JavaClassUtil(path));
     }
 
-    public FileInfo parse(String path) throws IOException {
+    public FileInfo parse() throws IOException {
         FileInfo info = null ;
         for(FileParser c : parsers) {
-            if(c.checkFile(path) == true)
+            if(c.checkFile(path) == true){
                 info = c.parse(path);
+                return info;
+            }
         }
-        return info;
+        throw new IOException();
     }
 }
